@@ -5,9 +5,10 @@ from collections import deque
 
 
 fig, ax1 = plt.subplots()
-ax2 = ax1.twinx()
-ax1.set_yscale("log")
+#ax2 = ax1.twinx()
+#ax2.set_yscale("log")
 #colors = deque(["blue", "orange", "lightblue", "yellow"])
+plotlines = []
 for argi in range(1,len(sys.argv)):
     xper = []
     xrxpow = []
@@ -31,11 +32,35 @@ for argi in range(1,len(sys.argv)):
                         break
 
 
-    #ax1.plot(xper,per, label="PER", color=colors.popleft())
+    #ax2.plot(xper,per, label="PER", color=colors.popleft())
     filename = sys.argv[argi].split("/")[-1]
-    ax2.plot(xrxpow, rxpow, label=filename + " RX Power (db)")#, color=colors.popleft())
+    plotline, = ax1.plot(xrxpow, rxpow, label=filename + " RX Power (db)")#, color=colors.popleft())
+    plotlines.append(plotline)
 #for rot in np.arange(0,0.45,0.001):
 #    ax1.axvline(rot, color="grey", alpha=0.5, lw=1)
-plt.legend()
-#ax2.set_ylim(top=-40,bottom=-42)
+leg = plt.legend()
+#ax1.set_ylim(top=-40,bottom=-42)
+
+
+lined = dict()
+for legline, origline in zip(leg.get_lines(), plotlines):
+    legline.set_picker(True)  # 5 pts tolerance
+    legline.set_pickradius(5)
+    lined[legline] = origline
+
+
+def onpick(event):
+    legline = event.artist
+    origline = lined[legline]
+    vis = not origline.get_visible()
+    origline.set_visible(vis)
+    if vis:
+        legline.set_alpha(1.0)
+    else:
+        legline.set_alpha(0.2)
+    fig.canvas.draw()
+
+
+fig.canvas.mpl_connect('pick_event', onpick)
+
 plt.show(block=True)

@@ -1,13 +1,11 @@
 from math import sin, cos, pi, prod
 import numpy as np
-filename = "codebook"
+filename = "codebookParam"
 antennaCount = 1
 azimuthsCount = 361
 elevationsCount = 181
 cardinality_multiplier = 10
-cardinality_multiplier_elev = 1
-
-#lambd = 1/60000000.
+cardinality_multiplier_elev = 10
 
 class Complex:
     def __init__(self, *, amplitude, phase):
@@ -120,15 +118,11 @@ antenna = Antenna(id=1, orientation=(0,0), shape=(32,2), phaseBits=5, sectorCoun
 #     antenna.add_sector(sector)
 
 #azmths = [45,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239]
-azmths = [69,0]#,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+azmths = [69,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
 #azmths = [355,356,357,358,359,0,1,2,3,4,5,6,7,8,9,10]
 azmths = np.array(azmths, dtype=np.int).tolist()
 for i in range(sectors):
     sector = Sector(id=i+1, azimuth=azmths[i], elevation=0)
     antenna.add_sector(sector)
 
-# sector = Sector(id=1, azimuth=45, elevation=45)
-# antenna.add_sector(sector)
-# sector = Sector(id=2, azimuth=-45, elevation=-45)
-# antenna.add_sector(sector)
 write_to_file([antenna])

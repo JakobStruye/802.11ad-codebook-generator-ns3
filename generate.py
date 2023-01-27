@@ -1,11 +1,12 @@
 from math import sin, cos, pi, prod
 import numpy as np
+import sys
 filename = "codebookParam"
 antennaCount = 1
 azimuthsCount = 361
 elevationsCount = 181
-cardinality_multiplier = 10
-cardinality_multiplier_elev = 10
+cardinality_multiplier = 1
+cardinality_multiplier_elev = 1
 
 class Complex:
     def __init__(self, *, amplitude, phase):
@@ -34,7 +35,9 @@ class Antenna:
         for _ in range(2 if duplicateElements else 1):
             for x in range(shape[0]):
                 for y in range(shape[1]):
-                    self.elements.append(Element(x, y))
+                    elpos = (x - ((shape[0] - 1) / 2), y - ((shape[1]-1) / 2))
+                    # print(elpos)
+                    self.elements.append(Element(*elpos))
     def add_sector(self, sector):
         self.sectors.append(sector)
 
@@ -52,27 +55,30 @@ class Sector:
         self.elevation = elevation
 
     def get_phase_for_element(self, element):
-        return - pi * get_offset(element, self.azimuth, self.elevation)
+        return pi * get_offset(element, self.azimuth, self.elevation)
 
 
 def get_offset(element, azimuth, elevation):
     #assert type(azimuth) == type(elevation) == int
     #return sin(azimuth) * (cos(elevation) * element.x_index + sin(elevation)*element.y_index)
+    # TODO should be -y according to matlab implementation
     return ( - element.x_index * sin(rad(azimuth)) * cos(rad(elevation)) + element.y_index * sin(rad(elevation)))
 
 def rad(degree):
     return degree / 180. * pi
 
 def azrange():
-   return np.linspace(0, azimuthsCount - 1, cardinality_multiplier * (azimuthsCount - 1) + 1)
+   return np.linspace(0, azimuthsCount - 1, cardinality_multiplier * (azimuthsCount - 1) + 1) - 180
 def elrange():
-   return np.linspace(0, elevationsCount - 1, cardinality_multiplier_elev * (elevationsCount - 1) + 1)
+   return np.linspace(0, elevationsCount - 1, cardinality_multiplier_elev * (elevationsCount - 1) + 1) - 90
 
 def write_to_file(antennas):
     with open(filename, "w") as f:
+        f.write("1\n") #number of rf chains
         f.write(str(len(antennas)) + '\n')
         for a in antennas:
             f.write(str(a.id) + "\n")
+            f.write("1\n") #rf id
             f.write(str(a.orientation[0]) + "\n")
             f.write(str(a.orientation[1]) + "\n")
             f.write(str(a.elementCount) + "\n")
@@ -90,11 +96,12 @@ def write_to_file(antennas):
                     testidx = 0
                     for el in elrange():
                     #for el in range(elevationsCount):
-                        el -= 90
                         testidx += 1
                         vals.append("1.000000")
-                        phase = pi * get_offset(element=e, azimuth=az, elevation=el)
+                        phase = -1 * pi * get_offset(element=e, azimuth=az, elevation=el)
                         vals.append("{:.6f}".format(phase))
+                        if vals[-1] == "-0.000000":
+                            vals[-1] = "0.000000"
                     f.write(",".join(vals) + "\n")
 
             #QuasiOmni AWV
@@ -109,20 +116,22 @@ def write_to_file(antennas):
                     vals.append("1.000000") #amplitude
                     phase = sector.get_phase_for_element(element)
                     vals.append("{:.6f}".format(phase))
+                    if vals[-1] == "-0.000000":
+                        vals[-1] = "0.000000"
                 f.write(",".join(vals) + "\n")
 
-sectors = 2
-antenna = Antenna(id=1, orientation=(0,0), shape=(32,2), phaseBits=5, sectorCount=sectors, duplicateElements=False)
+sectors = 37
+antenna = Antenna(id=1, orientation=(0,0), shape=(8,2), phaseBits=2, sectorCount=sectors, duplicateElements=False)
 # for i in range(sectors):
 #     sector = Sector(id=i+1, azimuth=round((360 / sectors)*i), elevation=0)
 #     antenna.add_sector(sector)
 
 #azmths = [45,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239]
-azmths = [69,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+azmths = list(range(0,361,10))
 #azmths = [355,356,357,358,359,0,1,2,3,4,5,6,7,8,9,10]
-azmths = np.array(azmths, dtype=np.int).tolist()
+# azmths = np.array(azmths, dtype=int).tolist()
 for i in range(sectors):
-    sector = Sector(id=i+1, azimuth=azmths[i], elevation=0)
+    sector = Sector(id=i+1, azimuth=azmths[i], elevation=0, usage = 2 if i%3==0 else 1)
     antenna.add_sector(sector)
 
 write_to_file([antenna])

@@ -53,5 +53,5 @@ def write_to_file(antennas):
             f.write(",".join(a.elementCount*["1.000000,0.000000"]) + "\n")
 
 
-antenna = Antenna(id=1, orientation=(0,0), shape=(32,2), phaseBits=5, sectorCount=1, duplicateElements=False)
+antenna = Antenna(id=1, orientation=(0,0), shape=(8,2), phaseBits=5)
 write_to_file([antenna])

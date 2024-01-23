@@ -8,6 +8,8 @@ elevationsCount = 181
 cardinality_multiplier = 1
 cardinality_multiplier_elev = 1
 
+antennaSize = (8,8)
+
 class Complex:
     def __init__(self, *, amplitude, phase):
         self.amplitude = amplitude
@@ -61,9 +63,7 @@ class Sector:
 
 
 def get_offset(element, azimuth, elevation):
-    #assert type(azimuth) == type(elevation) == int
-    #return sin(azimuth) * (cos(elevation) * element.x_index + sin(elevation)*element.y_index)
-    return ( - element.x_index * sin(rad(azimuth)) * cos(rad(elevation)) - element.y_index * sin(rad(elevation)))
+    return ( - element.x_index * sin(rad(azimuth)) * cos(rad(elevation)) + element.y_index * sin(rad(elevation)))
 
 def rad(degree):
     return degree / 180. * pi
@@ -107,8 +107,12 @@ def write_to_file(antennas):
             # f.write("1.000000,0.000000," + (",".join((a.elementCount-1)*["1.000000,0.000000"])) + "\n")
 
             #CUSTOM QUASI
-            # phases = [-3.1416, -0.5787, 0.8640, 3.1416, 0.1427, 1.0501,-1.5960,-1.7800,-0.2951, 2.1419, 3.1416, 3.1416,-1.8259,-3.1416,-3.1416,-1.2191]
-            phases = (64*64) * [0.0]
+            with open ("phases_small_v2.txt", "r") as phasefile:
+                phases = phasefile.readlines()
+                phases = [float(l) for l in phases]
+
+
+            # phases = prod(antennaSize) * ["0.000000"]
             phases = [str(ph) for ph in phases]
             f.write("1.000000," + ",1.000000,".join(phases) + "\n")
 
@@ -127,7 +131,7 @@ def write_to_file(antennas):
             f.write(str(a.sectorCount) + "\n")
             ##DOUBLE QUASI!
             f.write("1\n2\n2\n")
-            phases = (64*64)* ["0.000000"]
+            # phases = prod(antennaSize)* ["0.000000"]
             f.write("1.000000," + ",1.000000,".join(phases) + "\n")
 
             for sector in a.sectors:
@@ -136,27 +140,38 @@ def write_to_file(antennas):
                 f.write(str(sector.usage) + "\n")
                 vals = []
                 for element in a.elements:
-                    vals.append("1.000000") #amplitude
+                    vals.append("1.000000")# if sector.id == 30 else "0.000000") #amplitude
                     phase = sector.get_phase_for_element(element)
                     vals.append("{:.6f}".format(phase))
                     if vals[-1] == "-0.000000":
                         vals[-1] = "0.000000"
                 f.write(",".join(vals) + "\n")
 
-sectors = 38
-antenna = Antenna(id=1, orientation=(0,0), shape=(64,64), phaseBits=2, sectorCount=sectors, duplicateElements=False)
-# for i in range(sectors):
-#     sector = Sector(id=i+1, azimuth=round((360 / sectors)*i), elevation=0)
-#     antenna.add_sector(sector)
+if __name__ == "__main__":
+    sectors = 37
+    antenna = Antenna(id=1, orientation=(0,0), shape=antennaSize, phaseBits=2, sectorCount=sectors, duplicateElements=False)
+    # for i in range(sectors):
+    #     sector = Sector(id=i+1, azimuth=round((360 / sectors)*i), elevation=0)
+    #     antenna.add_sector(sector)
 
-#azmths = [45,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239]
-#azmths = list(range(30,361,10)) + list(range(0,30,10))
-azmths = list(range(0,361,10))
-#azmths = [355,356,357,358,359,0,1,2,3,4,5,6,7,8,9,10]
-# azmths = np.array(azmths, dtype=int).tolist()
+    #azmths = [45,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239]
+    #azmths = list(range(30,361,10)) + list(range(0,30,10))
+    azmths = list(range(0,360,10))
+    #azmths = [355,356,357,358,359,0,1,2,3,4,5,6,7,8,9,10]
+    # azmths = np.array(azmths, dtype=int).tolist()
 
-for i in range(sectors-1):
-    sector = Sector(id=i+2, azimuth=azmths[i], elevation=0, usage = 2 if i%3==0 else 1)
-    antenna.add_sector(sector)
+    azdirs = np.array([-50, -30, -10, 10, 30, 50])
+    eldirs = np.array([-50, -30, -10, 10, 30, 50])
+    # azdirs = np.array([0,0,0,0,0,0])
+    # eldirs = np.array([0,0,0,0,0, 0])
+    azdirs = np.repeat(azdirs, 6)
+    eldirs = np.tile(eldirs, 6)
+    dirs = np.vstack([azdirs, eldirs]).T
 
-write_to_file([antenna])
+    for i in range(sectors-1):
+        #Usage 0 is BHI, 1 is SLS, 2 is BOTH
+        sector = Sector(id=i + 2, azimuth=dirs[i,0], elevation=dirs[i,1], usage=2)# if i%2==0 else 1)
+        # sector = Sector(id=i+2, azimuth=azmths[i], elevation=-45, usage = 2)
+        antenna.add_sector(sector)
+
+    write_to_file([antenna])

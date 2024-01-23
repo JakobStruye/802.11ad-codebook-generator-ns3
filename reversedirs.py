@@ -8,11 +8,12 @@ elevationsCount = 181
 
 sectorCount = int(sys.argv[2])
 
-a = Antenna(id=1, orientation=(0,0), shape=(8,2), phaseBits=2, sectorCount=sectorCount, duplicateElements=False)
+a = Antenna(id=1, orientation=(0,0), shape=(8,8), phaseBits=2, sectorCount=sectorCount, duplicateElements=False)
 
 def azrange():
    return np.linspace(0, azimuthsCount - 1,  (azimuthsCount - 1) + 1) - 180
 def elrange():
+   # return np.linspace(-32, -22,11 )
    return np.linspace(0, elevationsCount - 1, (elevationsCount - 1) + 1) - 90
 
 def mirrorWrap(angle):
@@ -37,8 +38,10 @@ for az in azrange():
 with open (sys.argv[1], "r") as f:
 
     lines = f.readlines()
-    lines = lines[len(lines) - (sectorCount*4):]
-    for i in range(sectorCount):
+    lines = lines[len(lines) - ((sectorCount+1)*4+1):]
+    del(lines[4])
+    print(lines[0:5])
+    for i in range(sectorCount+1):
         l = lines[i*4+3]
         l = l.split(",")
         vals = []
@@ -52,8 +55,8 @@ with open (sys.argv[1], "r") as f:
         for steeridx in range(len(steervecs)):
             this_sv = steervecs[steeridx]
             result = np.matmul(np.atleast_2d(arr), np.atleast_2d(this_sv).T)
-            if result > best:
+            if abs(result) > abs(best):
                 best = result
                 bestidx = steeridx
         possible_azs = (azs[bestidx], mirrorWrap(azs[bestidx]))
-        print("Sector {} towards az {} or {}, el {} with gain {}".format(i+1, min(possible_azs), max(possible_azs), els[bestidx], best))
+        print("Sector {} towards az {} or {}, el {} with gain {}".format(i if i > 0 else "QUASI", min(possible_azs), max(possible_azs), els[bestidx], abs(best)[0][0]))
